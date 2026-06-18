@@ -1,12 +1,10 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, signal, inject } from '@angular/core';
 import { Task } from '../models/task.interface';
 import { Category } from '../models/category.interface';
-import { environment } from '../../environments/environment';
+import { UiService } from './ui.service';
 
-// Firebase SDK imports
-import { initializeApp } from 'firebase/app';
 import {
-  getFirestore,
+  Firestore,
   collection,
   doc,
   addDoc,
@@ -14,21 +12,18 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  Firestore,
-} from 'firebase/firestore';
-
-// Capacitor Native Preferences Storage
-import { Preferences } from '@capacitor/preferences';
+} from '@angular/fire/firestore';
+import { FirebaseRemoteConfig } from '@capacitor-firebase/remote-config';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TodoService {
-  private readonly TASKS_KEY = 'todo_tasks';
-  private readonly CATEGORIES_KEY = 'todo_categories';
+  private readonly firestore = inject(Firestore);
+  private readonly uiService = inject(UiService);
 
-  private db: Firestore | null = null;
-  public isFirebaseEnabled = false;
+  public readonly enableCategories = signal<boolean>(true);
+  public readonly isLoading = signal<boolean>(true);
 
   private readonly _tasks = signal<Task[]>([]);
   private readonly _categories = signal<Category[]>([]);
@@ -48,45 +43,47 @@ export class TodoService {
   });
 
   constructor() {
-    this.initFirebase();
+    this.initRemoteConfig();
     this.initializeData();
   }
 
-  private initFirebase() {
-    const config = environment.firebase;
-    if (config && config.apiKey && config.apiKey !== 'YOUR_API_KEY') {
-      try {
-        const app = initializeApp(config);
-        this.db = getFirestore(app);
-        this.isFirebaseEnabled = true;
-        console.log('Firebase Firestore inicializado correctamente.');
-      } catch (error) {
-        console.error('Error al inicializar Firebase. Usando almacenamiento nativo como respaldo:', error);
-        this.isFirebaseEnabled = false;
-      }
-    } else {
-      console.warn('Firebase no configurado. Usando almacenamiento nativo (Preferences) como respaldo.');
-      this.isFirebaseEnabled = false;
+  private async initRemoteConfig() {
+    try {
+      await FirebaseRemoteConfig.setSettings({
+        minimumFetchIntervalInSeconds: 0,
+      });
+
+      await FirebaseRemoteConfig.fetchAndActivate();
+
+      const { value } = await FirebaseRemoteConfig.getBoolean({
+        key: 'enable_categories',
+      });
+
+      this.enableCategories.set(value ?? true);
+
+    } catch (error) {
+      console.error('Error inicializando Remote Config:', error);
+      this.enableCategories.set(true);
     }
   }
 
-  private async initializeData() {
-    if (this.isFirebaseEnabled) {
-      this.listenToFirestore();
-    } else {
-      await this.loadFromNativeStorage();
-    }
+  private initializeData() {
+    this.listenToFirestore();
   }
 
-  // Real-time Firestore Listeners
+
   private listenToFirestore() {
-    if (!this.db) {
-      return;
-    }
+    let categoriesLoaded = false;
+    let tasksLoaded = false;
 
-    // Listen to Categories in real-time
+    const checkLoadingState = () => {
+      if (categoriesLoaded && tasksLoaded) {
+        this.isLoading.set(false);
+      }
+    };
+
     onSnapshot(
-      collection(this.db, 'categories'),
+      collection(this.firestore, 'categories'),
       (snapshot) => {
         const cats: Category[] = [];
         snapshot.forEach((doc) => {
@@ -98,22 +95,25 @@ export class TodoService {
           });
         });
 
-        // Add 'Todas' as the first default element if not present in DB
         const hasAll = cats.some((c) => c.id === null);
         if (!hasAll) {
           cats.unshift({ id: null, name: 'Todas', color: '#FFB7B2' });
         }
 
         this._categories.set(cats);
+        categoriesLoaded = true;
+        checkLoadingState();
       },
       (error) => {
-        console.error('Error escuchando categorías de Firestore:', error);
+        console.error(error);
+        categoriesLoaded = true;
+        checkLoadingState();
       }
     );
 
-    // Listen to Tasks in real-time
+
     onSnapshot(
-      collection(this.db, 'tasks'),
+      collection(this.firestore, 'tasks'),
       (snapshot) => {
         const tasksList: Task[] = [];
         snapshot.forEach((doc) => {
@@ -129,133 +129,68 @@ export class TodoService {
           });
         });
 
-        // Sort by creation date descending
-        tasksList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
+        tasksList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         this._tasks.set(tasksList);
+        tasksLoaded = true;
+        checkLoadingState();
       },
       (error) => {
-        console.error('Error escuchando tareas de Firestore:', error);
+        console.error(error);
+        tasksLoaded = true;
+        checkLoadingState();
       }
     );
   }
 
-  // --- CAPACITOR PREFERENCES STORAGE FALLBACK METHODS ---
-  private async loadFromNativeStorage() {
-    const { value: rawCategories } = await Preferences.get({ key: this.CATEGORIES_KEY });
-    const { value: rawTasks } = await Preferences.get({ key: this.TASKS_KEY });
 
-    if (rawCategories) {
-      try {
-        this._categories.set(JSON.parse(rawCategories));
-      } catch (e) {
-        await this.initDefaultCategoriesLocal();
-      }
-    } else {
-      await this.initDefaultCategoriesLocal();
-    }
-
-    if (rawTasks) {
-      try {
-        const parsed = JSON.parse(rawTasks) as any[];
-        const tasksWithDates = parsed.map((t) => ({
-          ...t,
-          createdAt: new Date(t.createdAt),
-        }));
-        this._tasks.set(tasksWithDates);
-      } catch (e) {
-        await this.initDefaultTasksLocal();
-      }
-    } else {
-      await this.initDefaultTasksLocal();
-    }
-  }
-
-  private async initDefaultCategoriesLocal() {
-    const defaults: Category[] = [
-      { id: null, name: 'Todas', color: '#FFB7B2' },
-      { id: '1', name: 'Trabajo', color: '#FFB7B2' },
-      { id: '2', name: 'Personal', color: '#B5EAD7' },
-      { id: '3', name: 'Estudios', color: '#C7CEEA' },
-      { id: '4', name: 'Otros', color: '#FFDAC1' },
-    ];
-    this._categories.set(defaults);
-    await Preferences.set({ key: this.CATEGORIES_KEY, value: JSON.stringify(defaults) });
-  }
-
-  private async initDefaultTasksLocal() {
-    const defaults: Task[] = [
-      { id: 't1', title: 'Completar reporte semanal', completed: false, categoryId: '1', createdAt: new Date() },
-      { id: 't2', title: 'Hacer ejercicio 30 mins', completed: true, categoryId: '2', createdAt: new Date() },
-      { id: 't3', title: 'Estudiar Angular 21 y Signals', completed: false, categoryId: '3', createdAt: new Date() },
-    ];
-    this._tasks.set(defaults);
-    await Preferences.set({ key: this.TASKS_KEY, value: JSON.stringify(defaults) });
-  }
-
-  private async saveCategoriesNative() {
-    await Preferences.set({ key: this.CATEGORIES_KEY, value: JSON.stringify(this._categories()) });
-  }
-
-  private async saveTasksNative() {
-    await Preferences.set({ key: this.TASKS_KEY, value: JSON.stringify(this._tasks()) });
-  }
 
   public async addCategory(name: string, color: string) {
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await addDoc(collection(this.db, 'categories'), { name, color });
-      } catch (e) {
-        console.error('Error al agregar categoría en Firestore:', e);
-      }
-    } else {
-      const newCat: Category = {
-        id: Date.now().toString(),
-        name,
-        color,
-      };
-      this._categories.update((cats) => [...cats, newCat]);
-      await this.saveCategoriesNative();
+    try {
+      await this.uiService.showLoading('Creando categoría...');
+      await addDoc(collection(this.firestore, 'categories'), { name, color });
+      await this.uiService.showToast('Categoría creada correctamente', 'success');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al crear categoría', 'danger');
+    } finally {
+      await this.uiService.hideLoading();
     }
   }
+
 
   public async updateCategory(id: string | null, name: string, color: string) {
     if (!id) {
       return;
     }
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await setDoc(doc(this.db, 'categories', id), { name, color }, { merge: true });
-      } catch (e) {
-        console.error('Error al actualizar categoría en Firestore:', e);
-      }
-    } else {
-      this._categories.update((cats) =>
-        cats.map((c) => (c.id === id ? { ...c, name, color } : c))
-      );
-      await this.saveCategoriesNative();
+    try {
+      await this.uiService.showLoading('Actualizando categoría...');
+      await setDoc(doc(this.firestore, 'categories', id), { name, color }, { merge: true });
+      await this.uiService.showToast('Categoría actualizada correctamente', 'success');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al actualizar categoría', 'danger');
+    } finally {
+      await this.uiService.hideLoading();
     }
   }
 
-  public async deleteCategory(id: string) {
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await deleteDoc(doc(this.db, 'categories', id));
-        const tasksToUpdate = this._tasks().filter((t) => t.categoryId === id);
-        for (const task of tasksToUpdate) {
-          await updateDoc(doc(this.db, 'tasks', task.id), { categoryId: null });
-        }
-      } catch (e) {
-        console.error('Error al eliminar categoría en Firestore:', e);
-      }
-    } else {
-      this._categories.update((cats) => cats.filter((c) => c.id !== id));
-      await this.saveCategoriesNative();
 
-      this._tasks.update((tasks) =>
-        tasks.map((t) => (t.categoryId === id ? { ...t, categoryId: undefined } : t))
-      );
-      await this.saveTasksNative();
+  public async deleteCategory(id: string) {
+    try {
+      await this.uiService.showLoading('Eliminando categoría...');
+      await deleteDoc(doc(this.firestore, 'categories', id));
+
+      const tasksToUpdate = this._tasks().filter((t) => t.categoryId === id);
+      for (const task of tasksToUpdate) {
+        await updateDoc(doc(this.firestore, 'tasks', task.id), { categoryId: null });
+      }
+      await this.uiService.showToast('Categoría eliminada correctamente', 'medium');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al eliminar categoría', 'danger');
+    } finally {
+      await this.uiService.hideLoading();
     }
 
     if (this._selectedCategoryId() === id) {
@@ -263,51 +198,43 @@ export class TodoService {
     }
   }
 
-  // Task Operations
   public async addTask(title: string, categoryId?: string) {
     const catId = categoryId || null;
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await addDoc(collection(this.db, 'tasks'), {
-          title,
-          completed: false,
-          categoryId: catId,
-          createdAt: new Date(),
-        });
-      } catch (e) {
-        console.error('Error al agregar tarea en Firestore:', e);
-      }
-    } else {
-      const newTask: Task = {
-        id: Date.now().toString(),
+    try {
+      await this.uiService.showLoading('Creando tarea...');
+      await addDoc(collection(this.firestore, 'tasks'), {
         title,
         completed: false,
-        categoryId: categoryId || undefined,
+        categoryId: catId,
         createdAt: new Date(),
-      };
-      this._tasks.update((tasks) => [newTask, ...tasks]);
-      await this.saveTasksNative();
+      });
+      await this.uiService.showToast('Tarea agregada correctamente', 'success');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al agregar tarea', 'danger');
+    } finally {
+      await this.uiService.hideLoading();
     }
   }
 
+
   public async updateTask(id: string, title: string, categoryId?: string) {
     const catId = categoryId || null;
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await updateDoc(doc(this.db, 'tasks', id), {
-          title,
-          categoryId: catId,
-        });
-      } catch (e) {
-        console.error('Error al actualizar tarea en Firestore:', e);
-      }
-    } else {
-      this._tasks.update((tasks) =>
-        tasks.map((t) => (t.id === id ? { ...t, title, categoryId: categoryId || undefined } : t))
-      );
-      await this.saveTasksNative();
+    try {
+      await this.uiService.showLoading('Actualizando tarea...');
+      await updateDoc(doc(this.firestore, 'tasks', id), {
+        title,
+        categoryId: catId,
+      });
+      await this.uiService.showToast('Tarea actualizada correctamente', 'success');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al actualizar tarea', 'danger');
+    } finally {
+      await this.uiService.hideLoading();
     }
   }
+
 
   public async toggleTaskCompletion(id: string) {
     const task = this._tasks().find((t) => t.id === id);
@@ -315,32 +242,28 @@ export class TodoService {
       return;
     }
 
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await updateDoc(doc(this.db, 'tasks', id), {
-          completed: !task.completed,
-        });
-      } catch (e) {
-        console.error('Error al cambiar completado en Firestore:', e);
-      }
-    } else {
-      this._tasks.update((tasks) =>
-        tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
-      );
-      await this.saveTasksNative();
+    try {
+      await updateDoc(doc(this.firestore, 'tasks', id), {
+        completed: !task.completed,
+      });
+      const status = !task.completed ? 'completada' : 'pendiente';
+      await this.uiService.showToast(`Tarea marcada como ${status}`, 'success');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al actualizar tarea', 'danger');
     }
   }
 
   public async deleteTask(id: string) {
-    if (this.isFirebaseEnabled && this.db) {
-      try {
-        await deleteDoc(doc(this.db, 'tasks', id));
-      } catch (e) {
-        console.error('Error al eliminar tarea en Firestore:', e);
-      }
-    } else {
-      this._tasks.update((tasks) => tasks.filter((t) => t.id !== id));
-      await this.saveTasksNative();
+    try {
+      await this.uiService.showLoading('Eliminando tarea...');
+      await deleteDoc(doc(this.firestore, 'tasks', id));
+      await this.uiService.showToast('Tarea eliminada correctamente', 'medium');
+    } catch (e) {
+      console.error(e);
+      await this.uiService.showToast('Error al eliminar tarea', 'danger');
+    } finally {
+      await this.uiService.hideLoading();
     }
   }
 

@@ -51,17 +51,16 @@ export class CategoryModalComponent {
   @Output() close = new EventEmitter<void>();
 
   public categoryName = '';
-  public selectedColor = '#FFB7B2'; // Default pastel red
+  public selectedColor = '#FFB7B2';
   public editingCategoryId: string | null = null;
 
-  // Pastel colors palette
   public colors: string[] = [
-    '#FFB7B2', // Light Pink/Red
-    '#FFDAC1', // Light Peach
-    '#E2F0CB', // Light Yellow
-    '#B5EAD7', // Light Mint
-    '#C7CEEA', // Light Blue
-    '#E8C7DE', // Light Lavender
+    '#FFB7B2',
+    '#FFDAC1',
+    '#E2F0CB',
+    '#B5EAD7',
+    '#C7CEEA',
+    '#E8C7DE',
   ];
 
   constructor(public todoService: TodoService) {
@@ -91,21 +90,22 @@ export class CategoryModalComponent {
     }
 
     if (this.editingCategoryId) {
-      // Update
       this.todoService.updateCategory(
         this.editingCategoryId,
         this.categoryName.trim(),
         this.selectedColor
       );
     } else {
-      // Add
       this.todoService.addCategory(this.categoryName.trim(), this.selectedColor);
     }
 
     this.resetForm();
   }
 
-  public deleteCategory(id: string) {
+  public deleteCategory(id: string | null) {
+    if (!id) {
+      return;
+    }
     this.todoService.deleteCategory(id);
     if (this.editingCategoryId === id) {
       this.resetForm();

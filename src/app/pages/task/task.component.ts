@@ -1,14 +1,10 @@
-import { Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonButton,
-  IonCard,
-  IonCardContent,
   IonContent,
   IonHeader,
   IonIcon,
-  IonInput,
   IonModal,
   IonSelect,
   IonSelectOption,
@@ -18,6 +14,9 @@ import {
   IonBadge,
   IonFab,
   IonFabButton,
+  IonSpinner,
+  IonButton,
+  IonButtons,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -27,17 +26,21 @@ import {
   closeOutline,
   filterOutline,
   listOutline,
+  eyeOutline,
+  eyeOffOutline,
 } from 'ionicons/icons';
 import { TodoService } from '../../services/todo.service';
 import { ListComponent } from '../../components/list/list.component';
 import { CategoryModalComponent } from '../../components/category-modal/category-modal.component';
 import { Task } from '../../models/task.interface';
+import { CardComponent } from './components/card/card.component';
 
 @Component({
   selector: 'app-task',
   templateUrl: './task.component.html',
   styleUrls: ['./task.component.scss'],
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     FormsModule,
@@ -45,11 +48,7 @@ import { Task } from '../../models/task.interface';
     IonHeader,
     IonToolbar,
     IonTitle,
-    IonButton,
     IonIcon,
-    IonCard,
-    IonCardContent,
-    IonInput,
     IonSelect,
     IonSelectOption,
     IonModal,
@@ -58,13 +57,17 @@ import { Task } from '../../models/task.interface';
     IonFab,
     IonFabButton,
     CategoryModalComponent,
-    IonBadge
+    CardComponent,
+    IonBadge,
+    IonSpinner,
+    IonButton,
+    IonButtons
   ],
 })
 export default class TaskComponent {
-  public taskTitle = '';
   public selectedCategoryId = '';
   public editingTaskId: string | null = null;
+  public taskTitle = '';
 
   constructor(public todoService: TodoService) {
     addIcons({
@@ -74,7 +77,21 @@ export default class TaskComponent {
       closeOutline,
       filterOutline,
       listOutline,
+      eyeOutline,
+      eyeOffOutline,
     });
+  }
+
+  public toggleCategories() {
+    this.todoService.enableCategories.set(!this.todoService.enableCategories());
+  }
+
+  getTitle(title: string) {
+    this.taskTitle = title;
+  }
+
+  getIdCategory(id: string) {
+    this.selectedCategoryId = id;
   }
 
   public onSelectFilterCategory(catId: string | null) {
@@ -82,12 +99,24 @@ export default class TaskComponent {
   }
 
   public onEditTask(task: Task) {
+
     this.editingTaskId = task.id;
     this.taskTitle = task.title;
     this.selectedCategoryId = task.categoryId || '';
   }
 
+  public onToggleComplete(taskId: string) {
+    this.todoService.toggleTaskCompletion(taskId);
+    if (taskId === this.editingTaskId) {
+      const task = this.todoService.tasks().find((t) => t.id === taskId);
+      if (task && !task.completed) {
+        this.cancelEditTask();
+      }
+    }
+  }
+
   public saveTask() {
+
     if (!this.taskTitle.trim()) {
       return;
     }
@@ -101,6 +130,8 @@ export default class TaskComponent {
       );
     } else {
       this.todoService.addTask(this.taskTitle.trim(), this.selectedCategoryId);
+      this.selectedCategoryId = ''
+
     }
 
     this.resetForm();

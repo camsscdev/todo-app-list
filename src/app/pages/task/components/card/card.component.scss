@@ -1,0 +1,51 @@
+:host {
+  display: block;
+}
+
+
+.task-form-card {
+  margin: 0 0 24px 0;
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid #edf2f7;
+  --background: #ffff;
+
+  .form-content {
+    padding: 16px;
+    --background-color: #ffff;
+
+    .task-input {
+      --background: #ffff;
+      --color: black
+    }
+  }
+
+  .form-header h3 {
+    margin: 0 0 16px 0;
+    font-size: 1rem;
+    font-weight: 650;
+    color: #2d3748;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+
+.input-item {
+  --background: #fcf8fa;
+  border-radius: 14px;
+  border: 1px solid #f0e2ec;
+  --padding-start: 16px;
+  --inner-padding-end: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus-within {
+    border-color: #cca3bf;
+    box-shadow: 0 0 0 3px rgba(245, 214, 235, 0.25);
+  }
+
+  .task-input {
+    font-size: 0.95rem;
+    color: #2d3748;
+  }
+}

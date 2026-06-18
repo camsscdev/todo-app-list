@@ -4,12 +4,10 @@ body {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
 }
 
-/* Apply beautiful custom font to all Ionic elements */
 * {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif !important;
 }
 
-/* General app body overrides */
 ion-content {
-  --background: #f7f9fc;
+  --background: #fcf9f7;
 }

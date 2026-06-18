@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Output } from '@angular/core';
+import { Component, EventEmitter, output, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   IonBadge,
@@ -33,14 +33,15 @@ import { Task } from '../../models/task.interface';
   ],
 })
 export class ListComponent {
-  @Output() edit = new EventEmitter<Task>();
+  public edit = output<Task>();
+  public toggleComplete = output<string>();
 
   constructor(public todoService: TodoService) {
     addIcons({ createOutline, trashOutline });
   }
 
-  public toggleComplete(taskId: string) {
-    this.todoService.toggleTaskCompletion(taskId);
+  public toggleCompleteTask(taskId: string) {
+    this.toggleComplete.emit(taskId);
   }
 
   public deleteTask(taskId: string) {

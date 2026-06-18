@@ -18,13 +18,17 @@
         aria-label="Nombre de la categoría"></ion-input>
     </ion-item>
 
-    <div class="color-picker-label">Selecciona un color pastel:</div>
+    <div class="color-picker-label">Selecciona un color:</div>
     <div class="color-picker">
-      <button *ngFor="let color of colors" type="button" class="color-dot" [style.background-color]="color"
+      @for (color of colors; track color) {
+      <button type="button" class="color-dot" [style.background-color]="color"
         [class.selected]="selectedColor === color" (click)="selectColor(color)"
         [attr.aria-label]="'Seleccionar color ' + color">
-        <ion-icon name="checkmark-outline" *ngIf="selectedColor === color"></ion-icon>
+        @if (selectedColor === color) {
+        <ion-icon name="checkmark-outline"></ion-icon>
+        }
       </button>
+      }
     </div>
 
     <div class="form-actions">
@@ -32,10 +36,12 @@
         <ion-icon [name]="editingCategoryId ? 'checkmark-outline' : 'add-outline'" slot="start"></ion-icon>
         {{ editingCategoryId ? 'Actualizar' : 'Crear Categoría' }}
       </ion-button>
-      <ion-button *ngIf="editingCategoryId" (click)="cancelEdit()" fill="clear" color="medium" expand="block"
-        class="cancel-btn">
+
+      @if (editingCategoryId) {
+      <ion-button (click)="cancelEdit()" fill="clear" color="medium" expand="block" class="cancel-btn">
         Cancelar
       </ion-button>
+      }
     </div>
   </div>
 
@@ -43,7 +49,9 @@
     <h3 class="list-title">Categorías Existentes</h3>
 
     <ion-list lines="none" class="category-list">
-      <ion-item *ngFor="let category of todoService.categories()" class="category-item">
+      @for (category of todoService.categories(); track $index) {
+      @if (category.id !== null) {
+      <ion-item class="category-item">
         <div class="color-badge" [style.background-color]="category.color"></div>
         <ion-label class="category-name">{{ category.name }}</ion-label>
 
@@ -51,16 +59,19 @@
           <ion-button (click)="editCategory(category)" class="action-btn edit-btn" aria-label="Editar categoría">
             <ion-icon name="create-outline"></ion-icon>
           </ion-button>
-          <ion-button (click)="deleteCategory(category.id!)" class="action-btn delete-btn"
+          <ion-button (click)="deleteCategory(category.id)" class="action-btn delete-btn"
             aria-label="Eliminar categoría">
             <ion-icon name="trash-outline"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-item>
+      }
+      }
 
-      <div *ngIf="todoService.categories().length === 0" class="no-categories">
+      @if (todoService.categories().length <= 1) { <div class="no-categories">
         No hay categorías creadas.
-      </div>
-    </ion-list>
+  </div>
+  }
+  </ion-list>
   </div>
 </ion-content>

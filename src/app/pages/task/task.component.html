@@ -1,13 +1,18 @@
 <ion-header [translucent]="true">
   <ion-toolbar class="main-toolbar">
     <ion-title>Mis Tareas</ion-title>
-
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleCategories()" fill="clear" color="medium" aria-label="Toggle Categories">
+        <ion-icon [name]="todoService.enableCategories() ? 'eye-outline' : 'eye-off-outline'"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding app-content">
   <div class="content-container">
 
+    @if (todoService.enableCategories()) {
     <div class="filter-section">
       <div class="filter-header">
         <ion-icon name="filter-outline" class="filter-icon"></ion-icon>
@@ -15,7 +20,7 @@
       </div>
       <div class="chips-container scroll-x">
         <ion-item lines="none" class="select-item filter-select-item flex-grow">
-          <ion-select aria-label="Filtrar por categoría" placeholder="Filtrar por categoría" interface="popover"
+          <ion-select aria-label="Filtrar por categoría" placeholder="Seleccionar categoría" interface="popover"
             (ionChange)="onSelectFilterCategory($event.detail.value)">
             <ion-select-option [value]="null">Todas</ion-select-option>
             @for (category of todoService.categories(); track $index) {
@@ -28,46 +33,21 @@
 
       </div>
     </div>
+    }
 
-    <ion-card class="task-form-card">
-      <ion-card-content class="form-content">
-        <div class="form-header">
-          <h3>{{ editingTaskId ? 'Editar Tarea' : 'Nueva Tarea' }}</h3>
-        </div>
 
-        <div class="inputs-row">
-          <!-- Task Title Input -->
-          <ion-item lines="none" class="input-item flex-grow">
-            <ion-input [(ngModel)]="taskTitle" placeholder="¿Qué necesitas hacer hoy?" class="task-input"
-              aria-label="Título de la tarea"></ion-input>
-          </ion-item>
+    <app-card [editingTaskId]="editingTaskId" (onTaskTitleSubmitted)="getTitle($event)"
+      [enableCategories]="todoService.enableCategories()" [taskTitle]="taskTitle"
+      [categories]="todoService.categories()" [selectedCategoryId]="selectedCategoryId"
+      (onCategoryIdSubmitted)="getIdCategory($event)" (onSaveTask)="saveTask()"
+      (cancelEditTask)="cancelEditTask()"></app-card>
 
-          <ion-item lines="none" class="select-item">
-            <ion-select [(ngModel)]="selectedCategoryId" interface="popover" placeholder="Categoría"
-              class="category-select" aria-label="Seleccionar categoría de tarea">
-              <ion-select-option value="">Sin categoría</ion-select-option>
-              @for (cat of todoService.categories(); track $index) {
-              <ion-select-option [value]="cat.id">
-                {{ cat.name }}
-              </ion-select-option>
-              }
-            </ion-select>
-          </ion-item>
-        </div>
-        <div class="form-actions">
-          <ion-button (click)="saveTask()" [disabled]="!taskTitle.trim()" expand="block" class="submit-btn">
-            <ion-icon [name]="editingTaskId ? 'checkmark-outline' : 'add-outline'" slot="start"></ion-icon>
-            {{ editingTaskId ? 'Guardar Cambios' : 'Agregar Tarea' }}
-          </ion-button>
-
-          <ion-button *ngIf="editingTaskId" (click)="cancelEditTask()" fill="clear" color="medium" class="cancel-btn">
-            <ion-icon name="close-outline" slot="start"></ion-icon>
-            Cancelar
-          </ion-button>
-        </div>
-      </ion-card-content>
-    </ion-card>
-
+    @if (todoService.isLoading()) {
+    <div class="spinner-container">
+      <ion-spinner name="crescent"></ion-spinner>
+      <p>Cargando tus tareas...</p>
+    </div>
+    } @else {
     <div class="list-header">
       <h3 class="list-title">Tareas</h3>
       <ion-badge color="light" class="task-count">
@@ -75,22 +55,22 @@
       </ion-badge>
     </div>
 
-    <app-list (edit)="onEditTask($event)"></app-list>
+    <app-list (edit)="onEditTask($event)" (toggleComplete)="onToggleComplete($event)"></app-list>
+    }
 
   </div>
 
-  <ion-modal #categoryModal trigger="open-categories-modal" class="categories-modal">
-    <ng-template>
-      <app-category-modal (close)="categoryModal.dismiss()"></app-category-modal>
-    </ng-template>
-  </ion-modal>
-
-
-
-
-  <ion-fab slot="fixed" vertical="bottom" horizontal="end" id="open-categories-modal">
-    <ion-fab-button aria-label="Gestionar Categorías">
+  @if (todoService.enableCategories()) {
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button (click)="categoryModal.present()" aria-label="Gestionar Categorías">
       <ion-icon name="options-outline"></ion-icon>
     </ion-fab-button>
   </ion-fab>
+  }
 </ion-content>
+
+<ion-modal #categoryModal class="categories-modal">
+  <ng-template>
+    <app-category-modal (close)="categoryModal.dismiss()"></app-category-modal>
+  </ng-template>
+</ion-modal>
