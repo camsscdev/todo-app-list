@@ -22,7 +22,7 @@ export class TodoService {
   private readonly firestore = inject(Firestore);
   private readonly uiService = inject(UiService);
 
-  public readonly enableCategories = signal<boolean>(true);
+  public readonly enableCategories = signal<boolean>(false);
   public readonly isLoading = signal<boolean>(true);
 
   private readonly _tasks = signal<Task[]>([]);
@@ -60,9 +60,8 @@ export class TodoService {
       });
 
       this.enableCategories.set(value ?? true);
-
     } catch (error) {
-      console.error('Error inicializando Remote Config:', error);
+      console.error(error);
       this.enableCategories.set(true);
     }
   }
@@ -70,7 +69,6 @@ export class TodoService {
   private initializeData() {
     this.listenToFirestore();
   }
-
 
   private listenToFirestore() {
     let categoriesLoaded = false;
@@ -108,9 +106,8 @@ export class TodoService {
         console.error(error);
         categoriesLoaded = true;
         checkLoadingState();
-      }
+      },
     );
-
 
     onSnapshot(
       collection(this.firestore, 'tasks'),
@@ -123,12 +120,9 @@ export class TodoService {
             title: data['title'],
             completed: data['completed'],
             categoryId: data['categoryId'] || undefined,
-            createdAt: data['createdAt']
-              ? new Date(data['createdAt'].seconds * 1000)
-              : new Date(),
+            createdAt: data['createdAt'] ? new Date(data['createdAt'].seconds * 1000) : new Date(),
           });
         });
-
 
         tasksList.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         this._tasks.set(tasksList);
@@ -139,11 +133,9 @@ export class TodoService {
         console.error(error);
         tasksLoaded = true;
         checkLoadingState();
-      }
+      },
     );
   }
-
-
 
   public async addCategory(name: string, color: string) {
     try {
@@ -157,7 +149,6 @@ export class TodoService {
       await this.uiService.hideLoading();
     }
   }
-
 
   public async updateCategory(id: string | null, name: string, color: string) {
     if (!id) {
@@ -174,7 +165,6 @@ export class TodoService {
       await this.uiService.hideLoading();
     }
   }
-
 
   public async deleteCategory(id: string) {
     try {
@@ -217,7 +207,6 @@ export class TodoService {
     }
   }
 
-
   public async updateTask(id: string, title: string, categoryId?: string) {
     const catId = categoryId || null;
     try {
@@ -234,7 +223,6 @@ export class TodoService {
       await this.uiService.hideLoading();
     }
   }
-
 
   public async toggleTaskCompletion(id: string) {
     const task = this._tasks().find((t) => t.id === id);

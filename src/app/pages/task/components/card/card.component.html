@@ -5,37 +5,52 @@
     </div>
 
     <div class="inputs-row">
-      <ion-item lines="none" class="input-item flex-grow">
-        <ion-input [ngModel]="taskTitle()" (ngModelChange)="emitTitle($event)" placeholder="¿Qué necesitas hacer hoy?"
-          class="task-input" aria-label="Título de la tarea">
+      <ion-item lines="none" class="input-item grow">
+        <ion-input
+          [ngModel]="taskTitle()"
+          (ngModelChange)="emitTitle($event)"
+          placeholder="¿Qué necesitas hacer hoy?"
+          class="task-input"
+          aria-label="Título de la tarea"
+        >
         </ion-input>
       </ion-item>
 
       @if (enableCategories()) {
-      <ion-item lines="none" class="select-item">
-        <ion-select [ngModel]="selectedCategoryId()" (ngModelChange)="emitCategoryId($event)" interface="popover" placeholder="Categoría" class="category-select"
-          aria-label="Seleccionar categoría de tarea" justify="space-between">
-          <ion-select-option value="">Sin categoría</ion-select-option>
-          @for (category of categories(); track $index) {
-          <ion-select-option [value]="category.id">
-            {{ category.name }}
-          </ion-select-option>
-          }
-        </ion-select>
-      </ion-item>
+        <ion-item lines="none" class="select-item">
+          <ion-select
+            [ngModel]="selectedCategoryId()"
+            (ngModelChange)="emitCategoryId($event)"
+            interface="popover"
+            placeholder="Categoría"
+            class="category-select"
+            aria-label="Seleccionar categoría de tarea"
+            justify="space-between"
+          >
+            <ion-select-option value="">Sin categoría</ion-select-option>
+            @for (category of categories(); track $index) {
+              <ion-select-option [value]="category.id">
+                {{ category.name }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
       }
     </div>
     <div class="form-actions">
       <ion-button (click)="saveTask()" [disabled]="!(taskTitle() || '').trim()" class="submit-btn">
-        <ion-icon [name]="editingTaskId() ? 'checkmark-outline' : 'add-outline'" slot="start"></ion-icon>
+        <ion-icon
+          [name]="editingTaskId() ? 'checkmark-outline' : 'add-outline'"
+          slot="start"
+        ></ion-icon>
         {{ editingTaskId() ? 'Guardar Cambios' : 'Agregar Tarea' }}
       </ion-button>
 
       @if (editingTaskId()) {
-      <ion-button (click)="cancelEdit()" fill="outline" class="cancel-btn">
-        <ion-icon name="close-outline" slot="start"></ion-icon>
-        Cancelar
-      </ion-button>
+        <ion-button (click)="cancelEdit()" fill="outline" class="cancel-btn">
+          <ion-icon name="close-outline" slot="start"></ion-icon>
+          Cancelar
+        </ion-button>
       }
     </div>
   </ion-card-content>

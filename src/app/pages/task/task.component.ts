@@ -34,6 +34,7 @@ import { ListComponent } from '../../components/list/list.component';
 import { CategoryModalComponent } from '../../components/category-modal/category-modal.component';
 import { Task } from '../../models/task.interface';
 import { CardComponent } from './components/card/card.component';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-task',
@@ -65,6 +66,7 @@ import { CardComponent } from './components/card/card.component';
   ],
 })
 export default class TaskComponent {
+  public appVersion = environment.appVersion;
   public selectedCategoryId = '';
   public editingTaskId: string | null = null;
   public taskTitle = '';
