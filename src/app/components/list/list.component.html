@@ -1,18 +1,53 @@
-<ion-list>
-  <ion-item>
-    <ion-label>Pokémon Yellow</ion-label>
-    <ion-icon slot="end" [name]="'create-outline'"></ion-icon>
-  </ion-item>
-  <ion-item>
-    <ion-label>Mega Man X</ion-label>
-  </ion-item>
-  <ion-item>
-    <ion-label>The Legend of Zelda</ion-label>
-  </ion-item>
-  <ion-item>
-    <ion-label>Pac-Man</ion-label>
-  </ion-item>
-  <ion-item>
-    <ion-label>Super Mario World</ion-label>
-  </ion-item>
+<ion-list lines="none" class="task-list">
+  @for (task of todoService.filteredTasks(); track $index) {
+    <ion-item class="task-item" [class.is-completed]="task.completed">
+      <ion-checkbox
+        slot="start"
+        [checked]="task.completed"
+        (ionChange)="toggleCompleteTask(task.id)"
+        class="task-checkbox"
+        aria-label="Marcar tarea como completada"
+      ></ion-checkbox>
+
+      <ion-label class="task-label">
+        <h2 class="task-title" [class.line-through]="task.completed">
+          {{ task.title }}
+        </h2>
+        <p class="task-date">
+          {{ task.createdAt | date: 'dd/MM/yyyy HH:mm' }}
+        </p>
+      </ion-label>
+
+      @if (todoService.enableCategories() && task.categoryId && getCategoryName(task.categoryId)) {
+        <ion-badge
+          class="category-badge"
+          [style.background-color]="getCategoryColor(task.categoryId)"
+        >
+          {{ getCategoryName(task.categoryId) }}
+        </ion-badge>
+      }
+
+      <ion-buttons slot="end" class="task-actions">
+        <ion-button (click)="editTask(task)" [disabled]="task.completed" class="action-btn edit-btn" aria-label="Editar tarea">
+          <ion-icon name="create-outline"></ion-icon>
+        </ion-button>
+        <ion-button
+          (click)="deleteTask(task.id)"
+          class="action-btn delete-btn"
+          aria-label="Eliminar tarea"
+        >
+          <ion-icon name="trash-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    </ion-item>
+  }
+  @if (todoService.filteredTasks().length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-container">
+        <div class="empty-circle"></div>
+      </div>
+      <h3>No hay tareas</h3>
+      <p>¡Agrega una nueva tarea para comenzar!</p>
+    </div>
+  }
 </ion-list>

@@ -1,0 +1,77 @@
+<ion-header>
+  <ion-toolbar class="modal-toolbar">
+    <ion-title>{{ editingCategoryId ? 'Editar Categoría' : 'Gestionar Categorías' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="dismissModal()" class="close-btn">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding modal-content">
+  <div class="category-form-container">
+    <h3 class="form-title">{{ editingCategoryId ? 'Modificar datos' : 'Nueva Categoría' }}</h3>
+
+    <ion-item lines="none" class="input-item">
+      <ion-input [(ngModel)]="categoryName" placeholder="Nombre de la categoría..." class="custom-input"
+        aria-label="Nombre de la categoría"></ion-input>
+    </ion-item>
+
+    <div class="color-picker-label">Selecciona un color:</div>
+    <div class="color-picker">
+      @for (color of colors; track color) {
+      <button type="button" class="color-dot" [style.background-color]="color"
+        [class.selected]="selectedColor === color" (click)="selectColor(color)"
+        [attr.aria-label]="'Seleccionar color ' + color">
+        @if (selectedColor === color) {
+        <ion-icon name="checkmark-outline"></ion-icon>
+        }
+      </button>
+      }
+    </div>
+
+    <div class="form-actions">
+      <ion-button (click)="saveCategory()" [disabled]="!categoryName.trim()" expand="block" class="save-btn">
+        <ion-icon [name]="editingCategoryId ? 'checkmark-outline' : 'add-outline'" slot="start"></ion-icon>
+        {{ editingCategoryId ? 'Actualizar' : 'Crear Categoría' }}
+      </ion-button>
+
+      @if (editingCategoryId) {
+      <ion-button (click)="cancelEdit()" fill="clear" color="medium" expand="block" class="cancel-btn">
+        Cancelar
+      </ion-button>
+      }
+    </div>
+  </div>
+
+  <div class="categories-list-container">
+    <h3 class="list-title">Categorías Existentes</h3>
+
+    <ion-list lines="none" class="category-list">
+      @for (category of todoService.categories(); track $index) {
+      @if (category.id !== null) {
+      <ion-item class="category-item">
+        <div class="color-badge" [style.background-color]="category.color"></div>
+        <ion-label class="category-name">{{ category.name }}</ion-label>
+
+        <ion-buttons slot="end">
+          <ion-button (click)="editCategory(category)" class="action-btn edit-btn" aria-label="Editar categoría">
+            <ion-icon name="create-outline"></ion-icon>
+          </ion-button>
+          <ion-button (click)="deleteCategory(category.id)" class="action-btn delete-btn"
+            aria-label="Eliminar categoría">
+            <ion-icon name="trash-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+      }
+      }
+
+      @if (todoService.categories().length <= 1) { <div class="no-categories">
+        No hay categorías creadas.
+  </div>
+  }
+  </ion-list>
+  </div>
+</ion-content>

@@ -1,0 +1,118 @@
+name: Build iOS App (.ipa)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS (.ipa)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Web Assets (Angular)
+        run: npm run build
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      # --- FIRMA DE CÓDIGO (Requerido para generar archivo .IPA ejecutable) ---
+      # Nota: Para que esta acción funcione, debes configurar los siguientes Secretos en GitHub:
+      # - P12_BASE64: Archivo del certificado de distribución Apple (.p12) codificado en Base64.
+      # - P12_KEY_PASSWORD: Contraseña para descifrar el certificado .p12.
+      # - MOBILEPROVISION_BASE64: Perfil de provisión de Apple (.mobileprovision) codificado en Base64.
+      # - TEAM_ID: ID de tu equipo de desarrollador Apple de 10 caracteres.
+      
+      - name: Install Apple Certificate and Provisioning Profile
+        run: |
+          # Crear variables temporales
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # Decodificar secretos de base64 a archivos binarios si están definidos
+          if [ -n "${{ secrets.P12_BASE64 }}" ]; then
+            echo "${{ secrets.P12_BASE64 }}" | base64 --decode > $CERTIFICATE_PATH
+            echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > $PP_PATH
+
+            # Crear y configurar llavero temporal (keychain)
+            security create-keychain -p "actions-password" $KEYCHAIN_PATH
+            security default-keychain -s $KEYCHAIN_PATH
+            security unlock-keychain -p "actions-password" $KEYCHAIN_PATH
+
+            # Importar el certificado al keychain
+            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "${{ secrets.P12_KEY_PASSWORD }}" -A -T /usr/bin/codesigns
+            security set-key-partition-list -S apple-tool:,apple: -s -k "actions-password" $KEYCHAIN_PATH
+
+            # Copiar el perfil de provisión al directorio del sistema
+            mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+            cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          else
+            echo "Sin certificado de firma de código configurado. Se intentará compilar sin firma (para simulador/validación de build)."
+          fi
+
+      - name: Build iOS Archive using Xcode CLI
+        run: |
+          if [ -n "${{ secrets.P12_BASE64 }}" ]; then
+            # Compilación firmada para producción / Ad-Hoc
+            xcodebuild -workspace ios/App/App.xcworkspace \
+                       -scheme App \
+                       -sdk iphoneos \
+                       -configuration Release \
+                       -archivePath $RUNNER_TEMP/App.xcarchive \
+                       archive
+                       
+            # Exportar archivo .IPA
+            # Nota: requere un archivo ExportOptions.plist. Para pruebas automáticas, se puede usar:
+            echo '<?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>method</key>
+                <string>ad-hoc</string>
+                <key>teamID</key>
+                <string>${{ secrets.TEAM_ID }}</string>
+                <key>compileBitcode</key>
+                <false/>
+                <key>signingStyle</key>
+                <string>manual</string>
+            </dict>
+            </plist>' > $RUNNER_TEMP/ExportOptions.plist
+
+            xcodebuild -exportArchive \
+                       -archivePath $RUNNER_TEMP/App.xcarchive \
+                       -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
+                       -exportPath build
+          else
+            # Compilación de prueba sin firma (sólo valida que el proyecto compile correctamente)
+            xcodebuild -workspace ios/App/App.xcworkspace \
+                       -scheme App \
+                       -sdk iphonesimulator \
+                       -configuration Debug \
+                       CODE_SIGNING_ALLOWED=NO \
+                       build
+            
+            # Crear directorio build vacío para que la acción de subida no falle
+            mkdir -p build
+            echo "Proyecto verificado y compilado para simulador exitosamente. No se generó un IPA firmado." > build/build-simulador-info.txt
+          fi
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-results
+          path: build/

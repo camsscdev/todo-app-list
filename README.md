@@ -1,59 +1,83 @@
-# TodoAppList
+# TodoAppList - Prueba Técnica Ionic / Angular - V.1.0
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.15.
+Aplicación móvil híbrida para la gestión de tareas (To-Do List) con soporte de categorías. Desarrollada con **Angular 21**, **Ionic** (Standalone), Firebase Firestore y Remote Config.
 
-## Development server
+---
 
-To start a local development server, run:
+## 📥 Enlaces de Descarga
+* **Android (APK)**: [Descargar APK](https://github.com/camilovillada/todo-app-list/releases) (o descargar desde la sección de Releases/Artifacts)
+* **iOS (IPA)**: [Descargar IPA](https://github.com/camilovillada/todo-app-list/actions) (generado automáticamente por GitHub Actions)
 
+---
+
+## 🚀 Requisitos e Instrucciones de Ejecución
+
+* **Versión de Node recomendada**: **Node 22** o superior.
+
+### 1. Clonar e Instalar Dependencias
 ```bash
-ng serve
+git clone <url-del-repositorio>
+cd todo-app-list
+npm install --legacy-peer-deps
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
+### 2. Ejecutar Servidor Web de Desarrollo
+Puedes iniciar la aplicación en modo desarrollo utilizando cualquiera de estos comandos:
 ```bash
-ng generate component component-name
+npm start
 ```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
+O también:
 ```bash
-ng generate --help
+ionic serve
 ```
-
-## Building
-
-To build the project run:
-
+O para que se abra automáticamente en tu navegador por defecto:
 ```bash
-ng build
+ng serve -o
 ```
+Por defecto, la aplicación estará disponible en `http://localhost:4200/`.
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
+### 3. Compilar para Android (.APK)
+Requisitos: Android Studio y Android SDK instalados.
 ```bash
-ng test
+npm run build
+npx cap sync android
+npx cap open android
 ```
+*Abre el proyecto en Android Studio y ejecuta la app en un dispositivo o emulador, o genera el APK desde el menú de Build.*
 
-## Running end-to-end tests
+### 4. Compilación para iOS (.IPA)
+Debido a que las compilaciones de iOS exigen un sistema operativo macOS y Xcode, se ofrecen las siguientes alternativas:
+* **Alternativa A (Recomendada - En la nube sin Mac)**: Se configuró un flujo automatizado en **GitHub Actions** ([build-ios.yml](file:///.github/workflows/build-ios.yml)) que compila y genera el archivo `.ipa` en un runner macOS cada vez que se suben cambios al repositorio.
+* **Alternativa B (Compilación local en Mac)**:
+  ```bash
+  npm run build
+  npx cap sync ios
+  npx cap open ios
+  ```
+  *Abre Xcode y presiona Run.*
 
-For end-to-end (e2e) testing, run:
+---
 
-```bash
-ng e2e
-```
+## ⚙️ Características y Cambios Realizados
+1. **CRUD en Tiempo Real con Firebase**: Integrado con Firestore utilizando `@angular/fire` para lectura y escritura en vivo.
+2. **Feature Flag con Remote Config**: Control dinámico mediante el flag `enable_categories` para activar o desactivar la funcionalidad de categorías en toda la interfaz.
+3. **Consistencia Visual (UI/UX)**: Diseño homogeneizado entre inputs y selects, resolución de paddings internos duplicados, animaciones fluídas de carga y toasters de confirmación para todas las acciones CRUD.
+4. **Despliegue Híbrido**: Estructura de compilación nativa soportada a través de Capacitor.
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+---
 
-## Additional Resources
+## 📝 Respuestas a las Preguntas de la Evaluación
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### A. ¿Cuáles fueron los principales desafíos que se enfrentaron al implementar las nuevas funcionalidades?
+* **Compilación de iOS en Windows**: Se resolvió automatizando la creación del `.ipa` mediante GitHub Actions con runners de macOS en la nube.
+* **Reactividad en vivo sin recargas**: Configurada conectando `onSnapshot` de Firestore directamente con los Signals nativos de Angular para flujos en vivo ultrarápidos.
+
+### B. ¿Qué técnicas de optimización de rendimiento se aplicaron y por qué?
+* **Angular Signals**: Evita la recarga de zonas pesadas y re-renders innecesarios, actualizando solo los nodos precisos del DOM.
+* **Standalone Components**: Minimizan el bundle inicial acelerando el tiempo de carga del primer renderizado.
+* **Limpieza en Batch**: Desasociación proactiva y segura en lote de las tareas afectadas al eliminar una categoría.
+
+### C. ¿Cómo se aseguró la calidad y mantenibilidad del código?
+* **Separación de Capas**: Lógica de base de datos desacoplada en el servicio centralizado `TodoService`.
+* **Tipado de Datos Estricto**: Definición exacta de interfaces TypeScript para `Task` y `Category`.
+* **Centralización de UX**: Notificaciones flotantes y cargadores unificados a través de un `UiService`.

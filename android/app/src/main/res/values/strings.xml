@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">todo-app-list</string>
+    <string name="title_activity_main">todo-app-list</string>
+    <string name="package_name">com.camsscdev.todoapplist</string>
+    <string name="custom_url_scheme">com.camsscdev.todoapplist</string>
+</resources>

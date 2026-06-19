@@ -1,1 +1,13 @@
-/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+}
+
+* {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif !important;
+}
+
+ion-content {
+  --background: #fcf9f7;
+}
