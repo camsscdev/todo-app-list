@@ -2,9 +2,9 @@ name: Build iOS App (.ipa)
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 jobs:
@@ -30,13 +30,6 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
-      # --- FIRMA DE CÓDIGO (Requerido para generar archivo .IPA ejecutable) ---
-      # Nota: Para que esta acción funcione, debes configurar los siguientes Secretos en GitHub:
-      # - P12_BASE64: Archivo del certificado de distribución Apple (.p12) codificado en Base64.
-      # - P12_KEY_PASSWORD: Contraseña para descifrar el certificado .p12.
-      # - MOBILEPROVISION_BASE64: Perfil de provisión de Apple (.mobileprovision) codificado en Base64.
-      # - TEAM_ID: ID de tu equipo de desarrollador Apple de 10 caracteres.
-      
       - name: Install Apple Certificate and Provisioning Profile
         run: |
           # Crear variables temporales
