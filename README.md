@@ -5,7 +5,7 @@ Aplicación móvil híbrida para la gestión de tareas (To-Do List) con soporte 
 ---
 
 ## 📥 Enlaces de Descarga
-* **Android (APK)**: [Descargar APK](https://github.com/camilovillada/todo-app-list/releases) (o descargar desde la sección de Releases/Artifacts)
+* **Android (APK)**: [Descargar APK]([https://github.com/camilovillada/todo-app-list/releases](https://github.com/camsscdev/todo-app-list/releases/tag/v1.0.0)) (o descargar desde la sección de Releases/Artifacts)
 * **iOS (IPA)**: [Descargar IPA](https://github.com/camilovillada/todo-app-list/actions) (generado automáticamente por GitHub Actions)
 
 ---
