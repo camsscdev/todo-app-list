@@ -1,0 +1,9 @@
+{
+	"appId": "com.camsscdev.todoapplist",
+	"appName": "todo-app-list",
+	"webDir": "dist/app",
+	"packageClassList": [
+		"FirebaseRemoteConfigPlugin",
+		"PreferencesPlugin"
+	]
+}
