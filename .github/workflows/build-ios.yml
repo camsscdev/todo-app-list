@@ -16,19 +16,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: pnpm install
 
       - name: Build Web Assets (Angular)
-        run: npm run build
+        run: pnpm run build
 
       - name: Sync Capacitor iOS
-        run: npx cap sync ios
+        run: pnpm cap sync ios
 
       - name: Install Apple Certificate and Provisioning Profile
         run: |
@@ -47,11 +53,15 @@ jobs:
             security default-keychain -s $KEYCHAIN_PATH
             security unlock-keychain -p "actions-password" $KEYCHAIN_PATH
 
-            # Importar el certificado al keychain
-            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "${{ secrets.P12_KEY_PASSWORD }}" -A -T /usr/bin/codesigns
+            # Importar el certificado al keychain (corregido a /usr/bin/codesign)
+            security import $CERTIFICATE_PATH -k $KEYCHAIN_PATH -P "${{ secrets.P12_KEY_PASSWORD }}" -A -T /usr/bin/codesign
+            
+            # Asegurar que el llavero temporal está en la ruta de búsqueda de macOS
+            security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | tr -d '"')
+            
             security set-key-partition-list -S apple-tool:,apple: -s -k "actions-password" $KEYCHAIN_PATH
 
-            # Copiar el perfil de provisión al directorio del sistema
+            # Copiar el perfil de provisión al directorio de Xcode
             mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
             cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
           else
@@ -69,8 +79,7 @@ jobs:
                        -archivePath $RUNNER_TEMP/App.xcarchive \
                        archive
                        
-            # Exportar archivo .IPA
-            # Nota: requere un archivo ExportOptions.plist. Para pruebas automáticas, se puede usar:
+            # Exportar archivo .IPA con mapeo de perfil de provisión
             echo '<?xml version="1.0" encoding="UTF-8"?>
             <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
             <plist version="1.0">
@@ -83,6 +92,11 @@ jobs:
                 <false/>
                 <key>signingStyle</key>
                 <string>manual</string>
+                <key>provisioningProfiles</key>
+                <dict>
+                    <key>com.camsscdev.todoapplist</key>
+                    <string>${{ secrets.PROVISIONING_PROFILE_NAME }}</string>
+                </dict>
             </dict>
             </plist>' > $RUNNER_TEMP/ExportOptions.plist
 
